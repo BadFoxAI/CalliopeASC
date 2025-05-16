@@ -1,33 +1,57 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ScanlinesUI</title>
+    <title>ScanlinesUI Engine</title>
     <style>
+        :root {
+            --bg-main: #1a1a1a;
+            --bg-panel: rgba(20, 20, 20, 0.95); /* Slightly more opaque */
+            --bg-input: #111;
+            --bg-button: #223322; /* Darker green */
+            --bg-button-hover: #334433;
+            --text-primary: #0f0;
+            --text-secondary: #0c0; /* Slightly darker green for less emphasis */
+            --border-primary: #050;
+            --border-accent: #0a0;
+            --shadow-glow: #0f0;
+            --icon-hamburger: '\2630'; /* Hamburger icon */
+            --icon-close: '\00D7';   /* Multiplication sign (X) */
+        }
+
+        body.theme-light {
+            --bg-main: #f0f0f0;
+            --bg-panel: rgba(250, 250, 250, 0.97);
+            --bg-input: #ffffff;
+            --bg-button: #d0e0d0;
+            --bg-button-hover: #c0d0c0;
+            --text-primary: #030;
+            --text-secondary: #020;
+            --border-primary: #c0c0c0;
+            --border-accent: #030;
+            --shadow-glow: #050;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #1a1a1a;
+            background-color: var(--bg-main);
             font-family: 'Courier New', Courier, monospace;
-            color: #0f0;
-            display: flex; /* Required for older full-frame approach, can be removed if #canvasContainer fills body */
-            justify-content: center; /* Centers canvas if not full-frame */
-            align-items: center; /* Centers canvas if not full-frame */
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
             height: 100vh;
         }
-        #appContainer { /* New main container for canvas and UI */
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
+        #appContainer { width: 100%; height: 100%; position: relative; }
         #mainCanvas {
-            display: block; /* Removes extra space if inline */
+            display: block;
             background-color: #000;
             image-rendering: pixelated;
-            border: 2px solid #0a0;
-            box-shadow: 0 0 10px #0f0;
-            /* Positioned by JS for fixed/full-frame */
+            border: 2px solid var(--border-secondary);
+            box-shadow: 0 0 10px var(--shadow-glow);
             position: absolute;
         }
         #controlsPanel {
@@ -35,500 +59,161 @@
             top: 10px;
             left: 10px;
             padding: 15px;
-            background-color: rgba(20, 20, 20, 0.92);
-            border: 1px solid #070;
+            padding-top: 45px; /* Space for the toggle button when panel is open */
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-primary);
             border-radius: 5px;
             z-index: 100;
-            max-height: calc(100vh - 20px); /* Ensure it doesn't overflow viewport */
+            max-height: calc(100vh - 20px);
             overflow-y: auto;
             transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
             opacity: 1;
-            width: 280px; /* Fixed width for the panel */
+            width: 290px;
+            color: var(--text-primary);
         }
         #controlsPanel.collapsed {
-            transform: translateX(calc(-100% - 10px)); /* Hide fully off-screen */
+            transform: translateX(calc(-100% - 20px));
             opacity: 0;
-            pointer-events: none; /* Prevent interaction when collapsed */
+            pointer-events: none;
         }
         #toggleControlsButton {
-            position: fixed; /* Fixed to viewport for easy access */
+            position: fixed; /* Changed to fixed for better behavior */
             top: 10px;
             left: 10px;
-            width: 35px;
-            height: 35px;
-            background-color: #070;
-            color: #0f0;
-            border: 1px solid #0f0;
+            width: 40px;
+            height: 40px;
+            background-color: var(--bg-button);
+            color: var(--text-primary);
+            border: 1px solid var(--border-accent);
             border-radius: 3px;
             cursor: pointer;
-            font-size: 1.5em;
-            line-height: 30px;
+            font-size: 1.6em;
+            line-height: 35px; /* Adjust for icon centering */
             text-align: center;
-            z-index: 101; /* Above the panel */
-            box-shadow: 0 0 8px #0f0;
+            z-index: 101;
+            box-shadow: 0 0 8px var(--shadow-glow);
+            transition: left 0.3s ease-in-out; /* Smooth transition for button shift */
         }
-        .controls-group { margin-bottom: 15px; }
-        .controls-group h3 { margin-top: 0; margin-bottom: 8px; color: #0f0; text-shadow: 0 0 5px #0f0; border-bottom: 1px solid #070; padding-bottom: 3px;}
-        .controls-group label { margin-right: 5px; display: block; margin-bottom: 4px; font-size: 0.9em;}
+        /* Shift button when panel is open */
+        #controlsPanel:not(.collapsed) ~ #toggleControlsButton {
+            left: calc(290px + 15px + 10px); /* Panel width + panel padding + desired gap */
+        }
+
+        #toggleControlsButton::before { content: var(--icon-hamburger); }
+        #controlsPanel:not(.collapsed) ~ #toggleControlsButton::before { content: var(--icon-close); }
+        
+        .controls-group { margin-bottom: 18px; }
+        .controls-group h3 { margin-top: 0; margin-bottom: 10px; color: var(--text-primary); text-shadow: 0 0 5px var(--shadow-glow); border-bottom: 1px solid var(--border-primary); padding-bottom: 5px;}
+        .controls-group label { margin-right: 5px; display: block; margin-bottom: 5px; font-size: 0.95em;}
         .controls-group input[type="number"], .controls-group input[type="range"], .controls-group select {
-            width: calc(100% - 10px); /* Full width minus padding */
-            background-color: #111;
-            color: #0f0;
-            border: 1px solid #070;
-            padding: 5px;
-            margin-bottom: 5px;
-            box-sizing: border-box;
-            font-family: 'Courier New', Courier, monospace;
+            width: calc(100% - 12px); background-color: var(--bg-input); color: var(--text-primary);
+            border: 1px solid var(--border-primary); padding: 6px; margin-bottom: 6px;
+            box-sizing: border-box; font-family: 'Courier New', Courier, monospace; border-radius: 3px;
         }
-        .controls-group input[type="checkbox"] { accent-color: #0f0; margin-right: 5px; vertical-align: middle;}
-        .controls-group button { width: 100%; background-color: #282; color: #0f0; border: 1px solid #070; padding: 6px; cursor: pointer; text-shadow: 0 0 3px #0f0; }
-        .controls-group button:hover { background-color: #050; }
-        .param-input { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
-        .param-input input[type="number"] { width: 70px; }
-        #fpsDisplay { position: fixed; bottom: 10px; right: 10px; font-size: 0.9em; color: #0f0; background-color: rgba(0,0,0,0.6); padding: 5px 8px; border-radius: 3px; z-index: 99; border: 1px solid #070;}
+        .controls-group input[type="range"] { padding: 0; }
+        .controls-group input[type="checkbox"] { accent-color: var(--text-primary); margin-right: 8px; vertical-align: middle;}
+        .controls-group button { width: 100%; background-color: var(--bg-button); color: var(--text-primary); border: 1px solid var(--border-primary); padding: 8px; cursor: pointer; text-shadow: 0 0 3px var(--shadow-glow); border-radius: 3px; }
+        .controls-group button:hover { background-color: var(--bg-button-hover); }
+        .param-input { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+        .param-input input[type="number"] { width: 75px; }
+        #fpsDisplay { position: fixed; bottom: 10px; right: 10px; font-size: 0.9em; background-color: rgba(0,0,0,0.6); padding: 5px 8px; border-radius: 3px; z-index: 99; border: 1px solid var(--border-primary); }
+        body.theme-light #fpsDisplay { background-color: rgba(255,255,255,0.7); border-color: var(--border-primary); color: var(--text-primary); }
+        #themeToggle, #resetViewButton { margin-top: 10px; }
     </style>
 </head>
 <body>
     <div id="appContainer">
         <canvas id="mainCanvas"></canvas>
         <div id="fpsDisplay">FPS: ...</div>
-        <button id="toggleControlsButton">☰</button> <!-- Hamburger icon -->
-        <div id="controlsPanel">
+        <!-- Toggle button moved outside the panel for consistent positioning -->
+        <button id="toggleControlsButton"></button>
+        <div id="controlsPanel" class="collapsed"> <!-- Start collapsed -->
             <div class="controls-group">
-                <h3>Primitive</h3>
+                <h3>Primitive Object</h3>
                 <select id="primitiveType"></select>
                 <div id="primitiveParams"></div>
-                <button id="generatePrimitiveButton">Generate Primitive</button>
+                 <button id="generatePrimitiveButton">Generate Primitive</button>
+            </div>
+             <div class="controls-group">
+                <h3>Real-time Transform</h3>
+                <label for="scaleX">Scale X: <span id="scaleXValue">1.00</span></label><input type="range" id="scaleX" min="0.1" max="3" step="0.05" value="1">
+                <label for="scaleY">Scale Y: <span id="scaleYValue">1.00</span></label><input type="range" id="scaleY" min="0.1" max="3" step="0.05" value="1">
+                <label for="scaleZ">Scale Z: <span id="scaleZValue">1.00</span></label><input type="range" id="scaleZ" min="0.1" max="3" step="0.05" value="1">
+                <label for="rotationSpeed">Rotation Speed: <span id="rotationSpeedValue">1.0</span></label><input type="range" id="rotationSpeed" min="0" max="5" step="0.1" value="1">
             </div>
             <div class="controls-group">
                 <h3>Display & Performance</h3>
-                <label for="chunkyFactor">Chunky Factor: <span id="chunkyFactorValue"></span></label>
-                <input type="range" id="chunkyFactor" min="1" max="32" step="1">
-                
-                <label for="targetFps">Calculation FPS: <span id="targetFpsValue"></span></label>
-                <input type="range" id="targetFps" min="1" max="60" step="1">
-                
-                <div>
-                    <input type="checkbox" id="fullFrameToggle">
-                    <label for="fullFrameToggle">Full Frame View</label>
-                </div>
+                <label for="chunkyFactor">Chunky Factor: <span id="chunkyFactorValue">8</span></label><input type="range" id="chunkyFactor" min="1" max="32" step="1" value="8">
+                <label for="targetFps">Calculation FPS: <span id="targetFpsValue">60</span></label><input type="range" id="targetFps" min="1" max="60" step="1" value="60">
+                <div><input type="checkbox" id="fullFrameToggle"><label for="fullFrameToggle">Full Frame View</label></div>
             </div>
             <div class="controls-group">
-                <h3>Effects</h3>
-                <div>
-                    <input type="checkbox" id="leaveTrails">
-                    <label for="leaveTrails">Leave Trails</label>
-                </div>
-                <label for="rotationSpeed">Rotation Speed: <span id="rotationSpeedValue"></span></label>
-                <input type="range" id="rotationSpeed" min="0" max="5" step="0.1">
-                
-                <label for="colorFilter">Color Filter:</label>
-                <select id="colorFilter"></select>
+                <h3>Visual Effects</h3>
+                <div><input type="checkbox" id="leaveTrails"><label for="leaveTrails">Leave Trails</label></div>
+                <label for="colorFilter">Color Filter:</label><select id="colorFilter"></select>
+                <label for="grainIntensity">Grain Intensity: <span id="grainIntensityValue">0</span></label><input type="range" id="grainIntensity" min="0" max="50" step="1" value="0">
+                <label for="canvasBrightness">Scene Brightness: <span id="canvasBrightnessValue">0.20</span></label><input type="range" id="canvasBrightness" min="0.05" max="1.0" step="0.01" value="0.2">
+
             </div>
             <div class="controls-group">
-                <h3>Presets</h3>
+                <h3>Presets & UI</h3>
                 <select id="presets"></select>
-                <button id="resetViewButton">Reset View & Rotation</button>
+                <button id="resetViewButton">Reset View, Scale & Rotation</button>
+                <button id="themeToggle">Toggle UI Theme</button>
             </div>
         </div>
     </div>
 
     <script>
     /**
-     * ChunkyScanlineJS - A simple 3D software rasterizer using HTML5 Canvas.
-     * Renders 3D primitives with chunky pixels and basic scanline filling.
+     * ScanlinesUI - A 3D software rasterizer for HTML5 Canvas.
+     * Features parameterized primitives, real-time effects, and a chunky scanline rendering style.
+     * Copyright (c) 2023 [Your Name/Organization]
+     * License: MIT (or your preferred license)
      */
 
-    // --- Core Math Classes ---
-    /** @class Vec3 Represents a 3D vector. */
-    class Vec3 {
-        constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
-        add(v) { return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z); }
-        sub(v) { return new Vec3(this.x - v.x, this.y - v.y, this.z - v.z); }
-        mulScalar(s) { return new Vec3(this.x * s, this.y * s, this.z * s); }
-        dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
-        cross(v) { return new Vec3(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x); }
-        length() { return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z); }
-        normalize() { const l = this.length(); return l > 1e-6 ? new Vec3(this.x / l, this.y / l, this.z / l) : new Vec3(); }
-    }
+    // --- Core Math Classes (Minified for brevity) ---
+    class Vec3{constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z}add(v){return new Vec3(this.x+v.x,this.y+v.y,this.z+v.z)}sub(v){return new Vec3(this.x-v.x,this.y-v.y,this.z-v.z)}mulScalar(s){return new Vec3(this.x*s,this.y*s,this.z*s)}dot(v){return this.x*v.x+this.y*v.y+this.z*v.z}cross(v){return new Vec3(this.y*v.z-this.z*v.y,this.z*v.x-this.x*v.z,this.x*v.y-this.y*v.x)}length(){return Math.sqrt(this.x*this.x+this.y*this.y+this.z*this.z)}normalize(){const l=this.length();return l>1e-6?new Vec3(this.x/l,this.y/l,this.z/l):new Vec3()}}
+    class Mat4{constructor(){this.m=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}static identity(){return new Mat4}static translation(x,y,z){const r=new Mat4;r.m[12]=x;r.m[13]=y;r.m[14]=z;return r}static rotationX(a){const r=new Mat4,c=Math.cos(a),s=Math.sin(a);r.m[5]=c;r.m[6]=s;r.m[9]=-s;r.m[10]=c;return r}static rotationY(a){const r=new Mat4,c=Math.cos(a),s=Math.sin(a);r.m[0]=c;r.m[2]=-s;r.m[8]=s;r.m[10]=c;return r}static scaling(x,y,z){const r=new Mat4();r.m[0]=x;r.m[5]=y;r.m[10]=z;return r}static perspective(f,a,n,fr){const r=new Mat4,t=1/Math.tan(f/2),i=1/(n-fr);r.m[0]=t/a;r.m[5]=t;r.m[10]=(n+fr)*i;r.m[11]=-1;r.m[14]=2*n*fr*i;r.m[15]=0;return r}multiply(o){const rs=new Mat4,a=this.m,b=o.m,r=rs.m;for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];r[i*4+j]=s}return rs}transformPointHomogeneous(p){const m=this.m;return{x:p.x*m[0]+p.y*m[4]+p.z*m[8]+m[12],y:p.x*m[1]+p.y*m[5]+p.z*m[9]+m[13],z:p.x*m[2]+p.y*m[6]+p.z*m[10]+m[14],w:p.x*m[3]+p.y*m[7]+p.z*m[11]+m[15]}}transformDirection(d){const m=this.m;return new Vec3(d.x*m[0]+d.y*m[4]+d.z*m[8],d.x*m[1]+d.y*m[5]+d.z*m[9],d.x*m[2]+d.y*m[6]+d.z*m[10])}}
 
-    /** @class Mat4 Represents a 4x4 matrix for 3D transformations. Stored column-major. */
-    class Mat4 {
-        constructor() { this.m = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]; }
-        static identity() { return new Mat4(); }
-        static translation(x,y,z){const r=new Mat4();r.m[12]=x;r.m[13]=y;r.m[14]=z;return r}
-        static rotationX(a){const r=new Mat4(),c=Math.cos(a),s=Math.sin(a);r.m[5]=c;r.m[6]=s;r.m[9]=-s;r.m[10]=c;return r}
-        static rotationY(a){const r=new Mat4(),c=Math.cos(a),s=Math.sin(a);r.m[0]=c;r.m[2]=-s;r.m[8]=s;r.m[10]=c;return r}
-        static perspective(fov,aspect,near,far){const r=new Mat4(),t=1/Math.tan(fov/2),rangeInv=1/(near-far);r.m[0]=t/aspect;r.m[5]=t;r.m[10]=(near+far)*rangeInv;r.m[11]=-1;r.m[14]=2*near*far*rangeInv;r.m[15]=0;return r}
-        multiply(other){const res=new Mat4(),a=this.m,b=other.m,r=res.m;for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];r[i*4+j]=s}return res}
-        transformPointHomogeneous(p){const m=this.m;return{x:p.x*m[0]+p.y*m[4]+p.z*m[8]+m[12],y:p.x*m[1]+p.y*m[5]+p.z*m[9]+m[13],z:p.x*m[2]+p.y*m[6]+p.z*m[10]+m[14],w:p.x*m[3]+p.y*m[7]+p.z*m[11]+m[15]}}
-        transformDirection(d){const m=this.m;return new Vec3(d.x*m[0]+d.y*m[4]+d.z*m[8],d.x*m[1]+d.y*m[5]+d.z*m[9],d.x*m[2]+d.y*m[6]+d.z*m[10])}
-    }
+    class Mesh{constructor(v,f){this.vertices=v;this.faces=f}}
+    class PrimitiveGenerator{static DEFAULT_COLOR='rgba(128,128,255,1)';static createCube(){const v=[new Vec3(-.5,-.5,-.5),new Vec3(.5,-.5,-.5),new Vec3(.5,.5,-.5),new Vec3(-.5,.5,-.5),new Vec3(-.5,-.5,.5),new Vec3(.5,-.5,.5),new Vec3(.5,.5,.5),new Vec3(-.5,.5,.5)],f=[{i:[0,1,2,3],c:this.DEFAULT_COLOR,n:new Vec3(0,0,-1)},{i:[1,5,6,2],c:this.DEFAULT_COLOR,n:new Vec3(1,0,0)},{i:[5,4,7,6],c:this.DEFAULT_COLOR,n:new Vec3(0,0,1)},{i:[4,0,3,7],c:this.DEFAULT_COLOR,n:new Vec3(-1,0,0)},{i:[3,2,6,7],c:this.DEFAULT_COLOR,n:new Vec3(0,1,0)},{i:[4,5,1,0],c:this.DEFAULT_COLOR,n:new Vec3(0,-1,0)}];return new Mesh(v,f)}static createSphere(r=0.5,sg=16,rg=8){const v=[],f=[];for(let i=0;i<=rg;i++){const yA=i/rg*Math.PI;for(let j=0;j<=sg;j++){const xA=j/sg*Math.PI*2;v.push(new Vec3(r*Math.cos(xA)*Math.sin(yA),r*Math.cos(yA),r*Math.sin(xA)*Math.sin(yA)))}}for(let i=0;i<rg;i++)for(let j=0;j<sg;j++){const frst=(i*(sg+1))+j,scnd=frst+sg+1;f.push({i:[frst,scnd,scnd+1,frst+1],c:this.DEFAULT_COLOR,n:v[frst].normalize()})}return new Mesh(v,f)}static createTorus(oR=.5,iR=.2,oS=16,iS=8){const v=[],f=[];for(let i=0;i<=oS;i++){const u=i/oS*Math.PI*2;for(let j=0;j<=iS;j++){const w=j/iS*Math.PI*2;v.push(new Vec3((oR+iR*Math.cos(w))*Math.cos(u),iR*Math.sin(w),(oR+iR*Math.cos(w))*Math.sin(u)))}}for(let i=0;i<oS;i++)for(let j=0;j<iS;j++){const a=(i*(iS+1))+j,b=((i+1)*(iS+1))+j,c=((i+1)*(iS+1))+(j+1),d=(i*(iS+1))+(j+1);f.push({i:[a,b,c,d],c:this.DEFAULT_COLOR,n:v[a].normalize()})}return new Mesh(v,f)}static createCylinder(r=.3,h=1,sg=16){const v=[],f=[],hh=h/2;for(let i=0;i<=sg;i++){const a=(i/sg)*Math.PI*2,x=r*Math.cos(a),z=r*Math.sin(a);v.push(new Vec3(x,-hh,z));v.push(new Vec3(x,hh,z))}for(let i=0;i<sg;i++){const i0=i*2,i1=i0+1,i2=((i+1)%sg)*2,i3=i2+1;f.push({i:[i0,i2,i3,i1],c:this.DEFAULT_COLOR,n:new Vec3(v[i0].x,0,v[i0].z).normalize()})}const tcI=v.length;v.push(new Vec3(0,hh,0));const bcI=v.length;v.push(new Vec3(0,-hh,0));for(let i=0;i<sg;i++){const vT1=i*2+1,vT2=((i+1)%sg)*2+1;f.push({i:[vT1,vT2,tcI],c:this.DEFAULT_COLOR,n:new Vec3(0,1,0)});const vB1=i*2,vB2=((i+1)%sg)*2;f.push({i:[vB2,vB1,bcI],c:this.DEFAULT_COLOR,n:new Vec3(0,-1,0)})}return new Mesh(v,f)}}
 
-    // --- Scene and Graphics Objects ---
-    /** @class Mesh Represents a 3D object with vertices and faces. */
-    class Mesh {
-        /**
-         * @param {Vec3[]} vertices Array of vertex positions.
-         * @param {object[]} faces Array of face definitions. Each face: { i: number[], c: string, n: Vec3 }
-         */
-        constructor(vertices, faces) {
-            this.vertices = vertices;
-            this.faces = faces;
-        }
-    }
-    
-    /** @class PrimitiveGenerator Utility for creating Mesh objects of basic shapes. */
-    class PrimitiveGenerator {
-        static DEFAULT_COLOR = 'rgba(128,128,255,1)';
-        static createCube() {
-            const v = [new Vec3(-.5,-.5,-.5),new Vec3(.5,-.5,-.5),new Vec3(.5,.5,-.5),new Vec3(-.5,.5,-.5),new Vec3(-.5,-.5,.5),new Vec3(.5,-.5,.5),new Vec3(.5,.5,.5),new Vec3(-.5,.5,.5)];
-            const f = [{i:[0,1,2,3],c:this.DEFAULT_COLOR,n:new Vec3(0,0,-1)},{i:[1,5,6,2],c:this.DEFAULT_COLOR,n:new Vec3(1,0,0)},{i:[5,4,7,6],c:this.DEFAULT_COLOR,n:new Vec3(0,0,1)},{i:[4,0,3,7],c:this.DEFAULT_COLOR,n:new Vec3(-1,0,0)},{i:[3,2,6,7],c:this.DEFAULT_COLOR,n:new Vec3(0,1,0)},{i:[4,5,1,0],c:this.DEFAULT_COLOR,n:new Vec3(0,-1,0)}];
-            return new Mesh(v, f);
-        }
-        static createSphere(radius = 0.5, segments = 16, rings = 8) {
-            const v = []; const f = [];
-            for(let i=0;i<=rings;i++){const yAngle=i/rings*Math.PI;for(let j=0;j<=segments;j++){const xAngle=j/segments*Math.PI*2;v.push(new Vec3(radius*Math.cos(xAngle)*Math.sin(yAngle),radius*Math.cos(yAngle),radius*Math.sin(xAngle)*Math.sin(yAngle)))}}
-            for(let i=0;i<rings;i++)for(let j=0;j<segments;j++){const first=(i*(segments+1))+j,second=first+segments+1;f.push({i:[first,second,second+1,first+1],c:this.DEFAULT_COLOR,n:v[first].normalize()})}
-            return new Mesh(v, f);
-        }
-        static createTorus(outerR = 0.5, innerR = 0.2, outerSeg = 16, innerSeg = 8) {
-            const v = []; const f = [];
-            for(let i=0;i<=outerSeg;i++){const u=i/outerSeg*Math.PI*2;for(let j=0;j<=innerSeg;j++){const w=j/innerSeg*Math.PI*2;v.push(new Vec3((outerR+innerR*Math.cos(w))*Math.cos(u),innerR*Math.sin(w),(outerR+innerR*Math.cos(w))*Math.sin(u)))}}
-            for(let i=0;i<outerSeg;i++)for(let j=0;j<innerSeg;j++){const a=(i*(innerSeg+1))+j,b=((i+1)*(innerSeg+1))+j,c=((i+1)*(innerSeg+1))+(j+1),d=(i*(innerSeg+1))+(j+1);f.push({i:[a,b,c,d],c:this.DEFAULT_COLOR,n:v[a].normalize()})}
-            return new Mesh(v, f);
-        }
-        static createCylinder(radius = 0.3, height = 1, segments = 16) {
-            const v = []; const f = []; const hh = height/2;
-            for(let i=0;i<=segments;i++){const a=(i/segments)*Math.PI*2,x=radius*Math.cos(a),z=radius*Math.sin(a);v.push(new Vec3(x,-hh,z));v.push(new Vec3(x,hh,z))}
-            for(let i=0;i<segments;i++){const i0=i*2,i1=i0+1,i2=((i+1)%segments)*2,i3=i2+1;f.push({i:[i0,i2,i3,i1],c:this.DEFAULT_COLOR,n:new Vec3(v[i0].x,0,v[i0].z).normalize()})}
-            const tcIdx=v.length;v.push(new Vec3(0,hh,0));const bcIdx=v.length;v.push(new Vec3(0,-hh,0));
-            for(let i=0;i<segments;i++){const vT1=i*2+1,vT2=((i+1)%segments)*2+1;f.push({i:[vT1,vT2,tcIdx],c:this.DEFAULT_COLOR,n:new Vec3(0,1,0)});const vB1=i*2,vB2=((i+1)%segments)*2;f.push({i:[vB2,vB1,bcIdx],c:this.DEFAULT_COLOR,n:new Vec3(0,-1,0)})}
-            return new Mesh(v, f);
-        }
-    }
+    class Camera{constructor(f,n,fr){this.position=new Vec3(0,.5,3);this.lookAtTarget=new Vec3(0,0,0);this.upVector=new Vec3(0,1,0);this.fov=f;this.nearPlane=n;this.farPlane=fr;this.aspectRatio=16/9}updateAspectRatio(w,h){this.aspectRatio=w/h}getViewMatrix(){const zA=this.position.sub(this.lookAtTarget).normalize(),xA=this.upVector.cross(zA).normalize(),yA=zA.cross(xA).normalize(),vM=Mat4.identity();vM.m[0]=xA.x;vM.m[4]=xA.y;vM.m[8]=xA.z;vM.m[1]=yA.x;vM.m[5]=yA.y;vM.m[9]=yA.z;vM.m[2]=zA.x;vM.m[6]=zA.y;vM.m[10]=zA.z;vM.m[12]=-xA.dot(this.position);vM.m[13]=-yA.dot(this.position);vM.m[14]=-zA.dot(this.position);return vM}getProjectionMatrix(){return Mat4.perspective(this.fov,this.aspectRatio,this.nearPlane,this.farPlane)}}
+    class Scene{constructor(cam){this.camera=cam;this.mesh=PrimitiveGenerator.createCube();this.lightDirection=new Vec3(.5,.5,1).normalize();this.ambientLight=.2;this.rotation={x:0,y:0};this.scale=new Vec3(1,1,1);this.rotationSpeedMultiplier=1}setMesh(m){this.mesh=m;this.rotation={x:0,y:0};/* Scale is preserved */}updateRotation(){this.rotation.x+=.005*this.rotationSpeedMultiplier;this.rotation.y+=.007*this.rotationSpeedMultiplier}}
 
-    /** @class Camera Manages view and projection matrices. */
-    class Camera {
-        constructor(fov, near, far) {
-            this.position = new Vec3(0, 0.5, 3);
-            this.lookAtTarget = new Vec3(0, 0, 0);
-            this.upVector = new Vec3(0, 1, 0);
-            this.fov = fov;
-            this.nearPlane = near;
-            this.farPlane = far;
-            this.aspectRatio = 16 / 9; // Default, will be updated
-        }
-        updateAspectRatio(width, height) { this.aspectRatio = width / height; }
-        getViewMatrix() {
-            const zAxis = this.position.sub(this.lookAtTarget).normalize();
-            const xAxis = this.upVector.cross(zAxis).normalize();
-            const yAxis = zAxis.cross(xAxis).normalize();
-            const view = Mat4.identity();
-            view.m[0]=xAxis.x;view.m[4]=xAxis.y;view.m[8]=xAxis.z;view.m[1]=yAxis.x;view.m[5]=yAxis.y;view.m[9]=yAxis.z;view.m[2]=zAxis.x;view.m[6]=zAxis.y;view.m[10]=zAxis.z;
-            view.m[12]=-xAxis.dot(this.position);view.m[13]=-yAxis.dot(this.position);view.m[14]=-zAxis.dot(this.position);
-            return view;
-        }
-        getProjectionMatrix() { return Mat4.perspective(this.fov, this.aspectRatio, this.nearPlane, this.farPlane); }
-    }
-
-    /** @class Scene Holds the current 3D model, camera, and lighting information. */
-    class Scene {
-        constructor(camera) {
-            this.camera = camera;
-            this.mesh = PrimitiveGenerator.createCube(); // Default mesh
-            this.lightDirection = new Vec3(0.5, 0.5, 1).normalize();
-            this.ambientLight = 0.2;
-            this.rotation = { x: 0, y: 0 };
-            this.rotationSpeedMultiplier = 1.0;
-        }
-        setMesh(mesh) { this.mesh = mesh; this.rotation = { x: 0, y: 0 }; }
-        updateRotation() {
-            this.rotation.x += 0.005 * this.rotationSpeedMultiplier;
-            this.rotation.y += 0.007 * this.rotationSpeedMultiplier;
-        }
-    }
-    
-    /** @class ChunkyScanlineRenderer Manages the canvas, rendering pipeline, and main loop. */
-    class ChunkyScanlineRenderer {
+    class ScanlinesUIRenderer {
         constructor(canvasId, scene, initialSettings) {
             this.canvas = document.getElementById(canvasId);
             this.ctx = this.canvas.getContext('2d');
             this.scene = scene;
-
-            this.chunkyFactor = initialSettings.chunkyFactor;
-            this.leaveTrails = initialSettings.leaveTrails;
-            this.targetFps = initialSettings.targetFps;
-            this.currentColorFilter = initialSettings.colorFilter;
-            this.isFullFrame = initialSettings.isFullFrame;
-            this.fixedWidth = initialSettings.fixedWidth;
-            this.fixedHeight = initialSettings.fixedHeight;
-
-            this.chunkyWidth = 0; this.chunkyHeight = 0;
-            this.frameBuffer = []; this.depthBuffer = [];
-            
-            this.animationFrameId = 0; this.lastFrameTime = 0; this.calculationFrameCounter = 0;
-            this.actualDisplayFps = 0; this.displayFrameCount = 0; this.lastFpsUpdateTime = 0;
-            this.framesToSkipCalculation = 0;
-
-            this.resize(); // Initial resize based on fullFrame or fixed settings
+            Object.assign(this, initialSettings);
+            this.chunkyWidth=0;this.chunkyHeight=0;this.frameBuffer=[];this.depthBuffer=[];this.animationFrameId=0;this.lastFrameTime=0;this.calculationFrameCounter=0;this.actualDisplayFps=0;this.displayFrameCount=0;this.lastFpsUpdateTime=0;this.framesToSkipCalculation=0;
+            this.resize();
         }
-
-        resize() {
-            const newWidth = this.isFullFrame ? window.innerWidth : this.fixedWidth;
-            const newHeight = this.isFullFrame ? window.innerHeight : this.fixedHeight;
-
-            this.canvas.width = newWidth;
-            this.canvas.height = newHeight;
-            
-            // Center canvas if not full frame (using absolute positioning)
-            if (!this.isFullFrame) {
-                this.canvas.style.left = `${(window.innerWidth - newWidth) / 2}px`;
-                this.canvas.style.top = `${(window.innerHeight - newHeight) / 2}px`;
-            } else {
-                 this.canvas.style.left = '0px';
-                 this.canvas.style.top = '0px';
-            }
-
-            this.scene.camera.updateAspectRatio(newWidth, newHeight);
-            this._initBuffers(true); // Force reinitialization due to size change
-            this.calculationFrameCounter = 0; // Force immediate recalculation
-        }
-
-        _initBuffers(forceClearFrameBuffer = false) {
-            const newChunkyWidth = Math.ceil(this.canvas.width / this.chunkyFactor);
-            const newChunkyHeight = Math.ceil(this.canvas.height / this.chunkyFactor);
-            let reinitializeFB = forceClearFrameBuffer || !this.leaveTrails || this.chunkyWidth !== newChunkyWidth || this.chunkyHeight !== newChunkyHeight;
-            this.chunkyWidth = newChunkyWidth; this.chunkyHeight = newChunkyHeight;
-            if(reinitializeFB) this.frameBuffer=Array(this.chunkyHeight).fill(null).map(()=>Array(this.chunkyWidth).fill(null));
-            this.depthBuffer=Array(this.chunkyHeight).fill(null).map(()=>Array(this.chunkyWidth).fill(-Infinity));
-        }
-
-        _applyColorFilter(r, g, b) {
-            switch(this.currentColorFilter){case'grayscale':const gr=Math.round(.299*r+.587*g+.114*b);return{r:gr,g:gr,b:gr};case'sepia':const sr=Math.min(255,Math.round(.393*r+.769*g+.189*b)),sg=Math.min(255,Math.round(.349*r+.686*g+.168*b)),sb=Math.min(255,Math.round(.272*r+.534*g+.131*b));return{r:sr,g:sg,b:sb};case'invert':return{r:255-r,g:255-g,b:255-b};case'red_channel':return{r:r,g:0,b:0};case'green_channel':return{r:0,g:g,b:0};case'blue_channel':return{r:0,g:0,b:b};case'none':default:return{r:r,g:g,b:b}}
-        }
-
-        _rasterizePolygon(projectedVerts, baseR, baseG, baseB, brightness) {
-            let mY=Infinity,MY=-Infinity;projectedVerts.forEach(v=>{mY=Math.min(mY,v.y);MY=Math.max(MY,v.y)});
-            const sY=Math.max(0,Math.floor(mY/this.chunkyFactor)),eY=Math.min(this.chunkyHeight-1,Math.floor(MY/this.chunkyFactor));
-            for(let cy=sY;cy<=eY;cy++){const slY=cy*this.chunkyFactor+this.chunkyFactor/2;let its=[];
-            for(let i=0;i<projectedVerts.length;i++){const p1=projectedVerts[i],p2=projectedVerts[(i+1)%projectedVerts.length];if((p1.y<=slY&&p2.y>slY)||(p2.y<=slY&&p1.y>slY)){const t=(slY-p1.y)/(p2.y-p1.y);its.push({x:p1.x+t*(p2.x-p1.x),z_view:p1.z_view+t*(p2.z_view-p1.z_view)})}}
-            if(its.length<2)continue;its.sort((a,b)=>a.x-b.x);
-            for(let i=0;i<its.length-1;i+=2){const xsi=its[i],xei=its[i+1],sX=Math.max(0,Math.floor(xsi.x/this.chunkyFactor)),eX=Math.min(this.chunkyWidth-1,Math.floor(xei.x/this.chunkyFactor));
-            for(let cx=sX;cx<=eX;cx++){const cPX=cx*this.chunkyFactor+this.chunkyFactor/2;if(cPX<xsi.x||cPX>xei.x)continue;let cZV=(xei.x-xsi.x===0)?xsi.z_view:xsi.z_view+((cPX-xsi.x)/(xei.x-xsi.x))*(xei.z_view-xsi.z_view);
-            if(cZV>this.depthBuffer[cy][cx]&&cZV<-this.scene.camera.nearPlane&&cZV>-this.scene.camera.farPlane){this.depthBuffer[cy][cx]=cZV;let{r,g,b}=this._applyColorFilter(Math.min(255,Math.floor(baseR*brightness)),Math.min(255,Math.floor(baseG*brightness)),Math.min(255,Math.floor(baseB*brightness)));this.frameBuffer[cy][cx]=`rgb(${r},${g},${b})`}}}}}
-        
-        _calculateFrameData() {
-            if(!this.leaveTrails)for(let y=0;y<this.chunkyHeight;++y)for(let x=0;x<this.chunkyWidth;++x)this.frameBuffer[y][x]=null;
-            for(let y=0;y<this.chunkyHeight;++y)for(let x=0;x<this.chunkyWidth;++x)this.depthBuffer[y][x]=-Infinity;
-
-            const s = this.scene;
-            const modelMatrix=Mat4.rotationX(s.rotation.x).multiply(Mat4.rotationY(s.rotation.y));
-            const viewMatrix=s.camera.getViewMatrix(); const projectionMatrix=s.camera.getProjectionMatrix();
-            const viewModelMatrix=viewMatrix.multiply(modelMatrix);
-
-            if (!s.mesh) return;
-
-            for(const face of s.mesh.faces){
-                const worldNormal=modelMatrix.transformDirection(face.n).normalize();
-                const firstWorldVertex=modelMatrix.transformPointHomogeneous(s.mesh.vertices[face.i[0]]);
-                const viewDirToPoint=s.camera.position.sub(new Vec3(firstWorldVertex.x,firstWorldVertex.y,firstWorldVertex.z)).normalize();
-                if(worldNormal.dot(viewDirToPoint)<=0)continue;
-
-                const diffuse=Math.max(0,worldNormal.dot(s.lightDirection));const brightness=s.ambientLight+(1-s.ambientLight)*diffuse;
-                const baseColorParts=face.c.match(/\d+/g).map(Number);
-                const projectedVertices=[];let skipFace=false;
-                for(const idx of face.i){
-                    const viewVertex=viewModelMatrix.transformPointHomogeneous(s.mesh.vertices[idx]);
-                    const clipVertex=projectionMatrix.transformPointHomogeneous(new Vec3(viewVertex.x,viewVertex.y,viewVertex.z));
-                    if(clipVertex.w<s.camera.nearPlane){skipFace=true;break}
-                    projectedVertices.push({x:(clipVertex.x/clipVertex.w+1)*.5*this.canvas.width,y:(1-clipVertex.y/clipVertex.w)*.5*this.canvas.height,z_view:viewVertex.z,w_clip:clipVertex.w});
-                }
-                if(skipFace)continue;
-                this._rasterizePolygon(projectedVertices,baseColorParts[0],baseColorParts[1],baseColorParts[2],brightness);
-            }
-            s.updateRotation();
-        }
-
-        _renderFrameBufferToCanvas() {
-            this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
-            for(let cy=0;cy<this.chunkyHeight;cy++)for(let cx=0;cx<this.chunkyWidth;cx++)if(this.frameBuffer[cy][cx]){this.ctx.fillStyle=this.frameBuffer[cy][cx];this.ctx.fillRect(cx*this.chunkyFactor,cy*this.chunkyFactor,this.chunkyFactor,this.chunkyFactor)}
-        }
-
-        _updateFpsDisplay(currentTime) {
-            this.displayFrameCount++;
-            if(currentTime - this.lastFpsUpdateTime > 1000){
-                this.actualDisplayFps = this.displayFrameCount; this.displayFrameCount = 0; this.lastFpsUpdateTime = currentTime;
-                const calcFpsStr = this.calculationFrameCounter === 0 ? this.targetFps : '~';
-                const targetStr = this.targetFps < 60 ? ` (Target ${this.targetFps})` : '';
-                fpsDisplay.textContent = `Display FPS: ${this.actualDisplayFps} | Calc: ${calcFpsStr}${targetStr}`;
-            }
-        }
-        
-        _mainLoop(currentTime) {
-            this.animationFrameId = requestAnimationFrame(this._mainLoop.bind(this));
-            this.lastFrameTime = currentTime;
-            this._updateFpsDisplay(currentTime);
-
-            if(this.calculationFrameCounter === 0) this._calculateFrameData();
-            this._renderFrameBufferToCanvas();
-            this.framesToSkipCalculation = Math.max(0, Math.floor((this.actualDisplayFps || 60) / this.targetFps) - 1);
-            this.calculationFrameCounter = (this.calculationFrameCounter + 1) % (this.framesToSkipCalculation + 1);
-        }
-
-        start() { this._mainLoop(0); }
-        stop() { cancelAnimationFrame(this.animationFrameId); }
-        
-        // Methods to be called by UIController
-        updateSetting(key, value, isMajorChange = false) {
-            this[key] = value;
-            if (key === 'targetFps') this.framesToSkipCalculation = Math.max(0, Math.floor(60 / this.targetFps) - 1); // Quick update
-            if (key === 'chunkyFactor' || key === 'isFullFrame' || isMajorChange) {
-                this.resize(); // This calls _initBuffers
-            } else {
-                this._initBuffers(); // Standard buffer re-init respecting trails
-            }
-            this.calculationFrameCounter = 0; // Force recalculation
-        }
+        resize(){const nW=this.isFullFrame?window.innerWidth:this.fixedWidth,nH=this.isFullFrame?window.innerHeight:this.fixedHeight;this.canvas.width=nW;this.canvas.height=nH;if(!this.isFullFrame){this.canvas.style.left=`${(window.innerWidth-nW)/2}px`;this.canvas.style.top=`${(window.innerHeight-nH)/2}px`}else{this.canvas.style.left='0px';this.canvas.style.top='0px'}this.scene.camera.updateAspectRatio(nW,nH);this._initBuffers(true);this.calculationFrameCounter=0}
+        _initBuffers(forceClearFB=false){const nCW=Math.ceil(this.canvas.width/this.chunkyFactor),nCH=Math.ceil(this.canvas.height/this.chunkyFactor);let rFB=forceClearFB||!this.leaveTrails||this.chunkyWidth!==nCW||this.chunkyHeight!==nCH;this.chunkyWidth=nCW;this.chunkyHeight=nCH;if(rFB)this.frameBuffer=Array(this.chunkyHeight).fill(null).map(()=>Array(this.chunkyWidth).fill(null));this.depthBuffer=Array(this.chunkyHeight).fill(null).map(()=>Array(this.chunkyWidth).fill(-Infinity))}
+        _applyColorFilter(r,g,b){switch(this.currentColorFilter){case'grayscale':const gr=Math.round(.299*r+.587*g+.114*b);return{r:gr,g:gr,b:gr};case'sepia':const sr=Math.min(255,Math.round(.393*r+.769*g+.189*b)),sg=Math.min(255,Math.round(.349*r+.686*g+.168*b)),sb=Math.min(255,Math.round(.272*r+.534*g+.131*b));return{r:sr,g:sg,b:sb};case'invert':return{r:255-r,g:255-g,b:255-b};case'red_channel':return{r:r,g:0,b:0};case'green_channel':return{r:0,g:g,b:0};case'blue_channel':return{r:0,g:0,b:b};default:return{r:r,g:g,b:b}}}
+        _applyGrain(r,g,b){if(this.grainIntensity<=0)return{r,g,b};const offset=(Math.random()*2-1)*this.grainIntensity;return{r:Math.max(0,Math.min(255,Math.round(r+offset))),g:Math.max(0,Math.min(255,Math.round(g+offset))),b:Math.max(0,Math.min(255,Math.round(b+offset)))}}
+        _rasterizePolygon(pV,bR,bG,bB,br){let mY=Infinity,MY=-Infinity;pV.forEach(v=>{mY=Math.min(mY,v.y);MY=Math.max(MY,v.y)});const sY=Math.max(0,Math.floor(mY/this.chunkyFactor)),eY=Math.min(this.chunkyHeight-1,Math.floor(MY/this.chunkyFactor));for(let cy=sY;cy<=eY;cy++){const slY=cy*this.chunkyFactor+this.chunkyFactor/2;let its=[];for(let i=0;i<pV.length;i++){const p1=pV[i],p2=pV[(i+1)%pV.length];if((p1.y<=slY&&p2.y>slY)||(p2.y<=slY&&p1.y>slY)){const t=(slY-p1.y)/(p2.y-p1.y);its.push({x:p1.x+t*(p2.x-p1.x),z_view:p1.z_view+t*(p2.z_view-p1.z_view)})}}if(its.length<2)continue;its.sort((a,b)=>a.x-b.x);for(let i=0;i<its.length-1;i+=2){const xsi=its[i],xei=its[i+1],sX=Math.max(0,Math.floor(xsi.x/this.chunkyFactor)),eX=Math.min(this.chunkyWidth-1,Math.floor(xei.x/this.chunkyFactor));for(let cx=sX;cx<=eX;cx++){const cPX=cx*this.chunkyFactor+this.chunkyFactor/2;if(cPX<xsi.x||cPX>xei.x)continue;let cZV=(xei.x-xsi.x===0)?xsi.z_view:xsi.z_view+((cPX-xsi.x)/(xei.x-xsi.x))*(xei.z_view-xsi.z_view);if(cZV>this.depthBuffer[cy][cx]&&cZV<-this.scene.camera.nearPlane&&cZV>-this.scene.camera.farPlane){this.depthBuffer[cy][cx]=cZV;let{r,g,b}=this._applyColorFilter(Math.min(255,Math.floor(bR*br)),Math.min(255,Math.floor(bG*br)),Math.min(255,Math.floor(bB*br)));({r,g,b}=this._applyGrain(r,g,b));this.frameBuffer[cy][cx]=`rgb(${r},${g},${b})`}}}}}
+        _calculateFrameData(){if(!this.leaveTrails)for(let y=0;y<this.chunkyHeight;++y)for(let x=0;x<this.chunkyWidth;++x)this.frameBuffer[y][x]=null;for(let y=0;y<this.chunkyHeight;++y)for(let x=0;x<this.chunkyWidth;++x)this.depthBuffer[y][x]=-Infinity;const s=this.scene,sM=Mat4.scaling(s.scale.x,s.scale.y,s.scale.z),rM=Mat4.rotationX(s.rotation.x).multiply(Mat4.rotationY(s.rotation.y)),mdlM=rM.multiply(sM),vM=s.camera.getViewMatrix(),pM=s.camera.getProjectionMatrix(),vmM=vM.multiply(mdlM);if(!s.mesh)return;for(const fc of s.mesh.faces){const wN=mdlM.transformDirection(fc.n).normalize(),fWV=mdlM.transformPointHomogeneous(s.mesh.vertices[fc.i[0]]),vDTP=s.camera.position.sub(new Vec3(fWV.x,fWV.y,fWV.z)).normalize();if(wN.dot(vDTP)<=0)continue;const df=Math.max(0,wN.dot(s.lightDirection)),br=s.ambientLight+(1-s.ambientLight)*df,bcP=fc.c.match(/\d+/g).map(Number),pV=[];let skF=false;for(const idx of fc.i){const vV=vmM.transformPointHomogeneous(s.mesh.vertices[idx]),cV=pM.transformPointHomogeneous(new Vec3(vV.x,vV.y,vV.z));if(cV.w<s.camera.nearPlane){skF=true;break}pV.push({x:(cV.x/cV.w+1)*.5*this.canvas.width,y:(1-cV.y/cV.w)*.5*this.canvas.height,z_view:vV.z,w_clip:cV.w})}if(skF)continue;this._rasterizePolygon(pV,bcP[0],bcP[1],bcP[2],br)}s.updateRotation()}
+        _renderFrameBufferToCanvas(){this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);for(let cy=0;cy<this.chunkyHeight;cy++)for(let cx=0;cx<this.chunkyWidth;cx++)if(this.frameBuffer[cy][cx]){this.ctx.fillStyle=this.frameBuffer[cy][cx];this.ctx.fillRect(cx*this.chunkyFactor,cy*this.chunkyFactor,this.chunkyFactor,this.chunkyFactor)}}
+        _updateFpsDisplay(cT){this.displayFrameCount++;if(cT-this.lastFpsUpdateTime>1000){this.actualDisplayFps=this.displayFrameCount;this.displayFrameCount=0;this.lastFpsUpdateTime=cT;const cFpsStr=this.calculationFrameCounter===0?this.targetFps:'~',tStr=this.targetFps<60?`(Target ${this.targetFps})`:'';fpsDisplay.textContent=`Display FPS: ${this.actualDisplayFps} | Calc: ${cFpsStr}${tStr}`}}
+        _mainLoop(cT){this.animationFrameId=requestAnimationFrame(this._mainLoop.bind(this));this.lastFrameTime=cT;this._updateFpsDisplay(cT);if(this.calculationFrameCounter===0)this._calculateFrameData();this._renderFrameBufferToCanvas();this.framesToSkipCalculation=Math.max(0,Math.floor((this.actualDisplayFps||60)/this.targetFps)-1);this.calculationFrameCounter=(this.calculationFrameCounter+1)%(this.framesToSkipCalculation+1)}
+        start(){this._mainLoop(0)}stop(){cancelAnimationFrame(this.animationFrameId)}
+        updateSetting(k,v,isMajor=false){this[k]=v;if(k==='targetFps')this.framesToSkipCalculation=Math.max(0,Math.floor(60/this.targetFps)-1);if(k==='chunkyFactor'||k==='isFullFrame'||isMajor)this.resize();else this._initBuffers();this.calculationFrameCounter=0}
     }
 
-    /** @class UIController Manages HTML controls and their interactions with the Renderer and Scene. */
-    class UIController {
-        constructor(renderer, scene) {
-            this.renderer = renderer;
-            this.scene = scene;
-            this.elements = { /* DOM elements are fetched here */ };
-            this._initDOMElements();
-            this._populateSelects();
-            this._bindEventListeners();
-            this.updateUIFromState(); // Set initial UI values from renderer/scene
-            this.updatePrimitiveParamsUI(); // For default primitive
-        }
+    class UIController{constructor(r,s){this.renderer=r;this.scene=s;this.elements={};this._initDOMElements();this._populateSelects();this._bindEventListeners();this.updateUIFromState();this.updatePrimitiveParamsUI()}
+    _initDOMElements(){const ids=['mainCanvas','fpsDisplay','controlsPanel','toggleControlsButton','chunkyFactor','chunkyFactorValue','leaveTrails','targetFps','targetFpsValue','rotationSpeed','rotationSpeedValue','resetViewButton','presets','colorFilter','primitiveType','primitiveParams','generatePrimitiveButton','fullFrameToggle','scaleX','scaleXValue','scaleY','scaleYValue','scaleZ','scaleZValue','grainIntensity','grainIntensityValue','themeToggle','canvasBrightness','canvasBrightnessValue'];ids.forEach(id=>this.elements[id]=document.getElementById(id))} // Added canvasBrightness
+    _populateSelects(){const pR={cube:"Cube",sphere:"Sphere",torus:"Torus",cylinder:"Cylinder"},cF={none:"None",grayscale:"Grayscale",sepia:"Sepia",invert:"Invert",red_channel:"Red Channel",green_channel:"Green Channel",blue_channel:"Blue Channel"},pS={default:"Default Smooth",cctv:"Bad CCTV","80s_vector":"80s Vector Glow",ultra_chunky:"Ultra Chunky",ghosting:"Ghosting Effect",psychedelic:"Psychedelic Trails"};Object.entries(pR).forEach(([v,t])=>this.elements.primitiveType.add(new Option(t,v)));Object.entries(cF).forEach(([v,t])=>this.elements.colorFilter.add(new Option(t,v)));Object.entries(pS).forEach(([v,t])=>this.elements.presets.add(new Option(t,v)))}
+    updateUIFromState(){this.elements.chunkyFactor.value=this.renderer.chunkyFactor;this.elements.chunkyFactorValue.textContent=this.renderer.chunkyFactor;this.elements.targetFps.value=this.renderer.targetFps;this.elements.targetFpsValue.textContent=this.renderer.targetFps;this.elements.leaveTrails.checked=this.renderer.leaveTrails;this.elements.rotationSpeed.value=this.scene.rotationSpeedMultiplier;this.elements.rotationSpeedValue.textContent=this.scene.rotationSpeedMultiplier.toFixed(1);this.elements.colorFilter.value=this.renderer.currentColorFilter;this.elements.fullFrameToggle.checked=this.renderer.isFullFrame;this.elements.scaleX.value=this.scene.scale.x;this.elements.scaleXValue.textContent=this.scene.scale.x.toFixed(2);this.elements.scaleY.value=this.scene.scale.y;this.elements.scaleYValue.textContent=this.scene.scale.y.toFixed(2);this.elements.scaleZ.value=this.scene.scale.z;this.elements.scaleZValue.textContent=this.scene.scale.z.toFixed(2);this.elements.grainIntensity.value=this.renderer.grainIntensity;this.elements.grainIntensityValue.textContent=this.renderer.grainIntensity;this.elements.canvasBrightness.value=this.scene.ambientLight;this.elements.canvasBrightnessValue.textContent=this.scene.ambientLight.toFixed(2);}
+    _bindEventListeners(){this.elements.toggleControlsButton.addEventListener('click',()=>{this.elements.controlsPanel.classList.toggle('collapsed')});window.addEventListener('resize',()=>this.renderer.resize());const inputsToUpdate=['chunkyFactor','targetFps','leaveTrails','rotationSpeed','colorFilter','fullFrameToggle','scaleX','scaleY','scaleZ','grainIntensity','canvasBrightness'];inputsToUpdate.forEach(id=>{const el=this.elements[id];if(!el)return; const isRangeOrNumber=el.type==='range'||el.type==='number';const isCheckbox=el.type==='checkbox';const eventType=isRangeOrNumber?'input':'change';el.addEventListener(eventType,e=>{let val=isCheckbox?e.target.checked:(isRangeOrNumber?parseFloat(e.target.value):e.target.value);if(id.startsWith('scale'))this.scene.scale[id.slice(-1).toLowerCase()]=val;else if(id==='canvasBrightness')this.scene.ambientLight=val;else this.renderer.updateSetting(id,val,id==='chunkyFactor'||id==='fullFrameToggle');if(this.elements[`${id}Value`])this.elements[`${id}Value`].textContent=(typeof val==='number'&&!Number.isInteger(val))?val.toFixed(id.startsWith('scale')||id==='canvasBrightness'?2:1):val;})});this.elements.resetViewButton.addEventListener('click',()=>{this.scene.rotation={x:0,y:0};this.scene.scale=new Vec3(1,1,1);this.renderer.calculationFrameCounter=0;this.updateUIFromState()});this.elements.primitiveType.addEventListener('change',()=>this.updatePrimitiveParamsUI());this.elements.generatePrimitiveButton.addEventListener('click',()=>{this.generateSelectedPrimitive();this.renderer.updateSetting('triggerPrimitiveChange',true,true)});this.elements.presets.addEventListener('change',()=>this.applyPreset());this.elements.themeToggle.addEventListener('click',()=>{document.body.classList.toggle('theme-light');this.elements.controlsPanel.classList.toggle('theme-light')})}
+    updatePrimitiveParamsUI(){this.elements.primitiveParams.innerHTML='';const t=this.elements.primitiveType.value;let h='';switch(t){case'sphere':h=`<div><label>Radius:</label><input type="number" id="p_sphereR" value="0.5" step="0.1"></div><div><label>Segments:</label><input type="number" id="p_sphereSeg" value="16" min="3"></div><div><label>Rings:</label><input type="number" id="p_sphereRing" value="8" min="2"></div>`;break;case'torus':h=`<div><label>OuterR:</label><input type="number" id="p_torusOR" value="0.5" step="0.1"></div><div><label>InnerR:</label><input type="number" id="p_torusIR" value="0.2" step="0.05"></div><div><label>OuterSeg:</label><input type="number" id="p_torusOS" value="16" min="3"></div><div><label>InnerSeg:</label><input type="number" id="p_torusIS" value="8" min="3"></div>`;break;case'cylinder':h=`<div><label>Radius:</label><input type="number" id="p_cylR" value="0.3" step="0.1"></div><div><label>Height:</label><input type="number" id="p_cylH" value="1" step="0.1"></div><div><label>Segments:</label><input type="number" id="p_cylSeg" value="16" min="3"></div>`;break}this.elements.primitiveParams.innerHTML=h}
+    generateSelectedPrimitive(){const t=this.elements.primitiveType.value;let m;try{switch(t){case'sphere':m=PrimitiveGenerator.createSphere(parseFloat(document.getElementById('p_sphereR').value),parseInt(document.getElementById('p_sphereSeg').value),parseInt(document.getElementById('p_sphereRing').value));break;case'torus':m=PrimitiveGenerator.createTorus(parseFloat(document.getElementById('p_torusOR').value),parseFloat(document.getElementById('p_torusIR').value),parseInt(document.getElementById('p_torusOS').value),parseInt(document.getElementById('p_torusIS').value));break;case'cylinder':m=PrimitiveGenerator.createCylinder(parseFloat(document.getElementById('p_cylR').value),parseFloat(document.getElementById('p_cylH').value),parseInt(document.getElementById('p_cylSeg').value));break;default:m=PrimitiveGenerator.createCube()}}catch(e){console.error("Error generating primitive:",e);m=PrimitiveGenerator.createCube()}this.scene.setMesh(m)}
+    applyPreset(){const p=this.elements.presets.value,s={chunkyFactor:8,targetFps:60,leaveTrails:false,rotationSpeed:1,colorFilter:'none',isFullFrame:this.renderer.isFullFrame,grainIntensity:0,scale:new Vec3(1,1,1),ambientLight:0.2};switch(p){case'cctv':Object.assign(s,{chunkyFactor:16,targetFps:5,leaveTrails:true,rotationSpeed:.3,colorFilter:'grayscale',grainIntensity:35,ambientLight:0.1});break;case'80s_vector':Object.assign(s,{chunkyFactor:4,targetFps:60,leaveTrails:true,rotationSpeed:.7,grainIntensity:5,ambientLight:0.3});break;case'ultra_chunky':Object.assign(s,{chunkyFactor:32,targetFps:60,ambientLight:0.25});break;case'ghosting':Object.assign(s,{chunkyFactor:8,targetFps:15,leaveTrails:true,rotationSpeed:1.5,colorFilter:'blue_channel',ambientLight:0.15});break;case'psychedelic':Object.assign(s,{chunkyFactor:2,targetFps:60,leaveTrails:true,rotationSpeed:2,colorFilter:'invert',grainIntensity:10,ambientLight:0.25});break}this.renderer.updateSetting('chunkyFactor',s.chunkyFactor,true);this.renderer.updateSetting('targetFps',s.targetFps);this.renderer.updateSetting('leaveTrails',s.leaveTrails);this.scene.rotationSpeedMultiplier=s.rotationSpeed;this.renderer.updateSetting('currentColorFilter',s.colorFilter);this.renderer.updateSetting('grainIntensity',s.grainIntensity);this.scene.scale=s.scale;this.scene.ambientLight=s.ambientLight;this.updateUIFromState()}}
 
-        _initDOMElements() {
-            const ids = ['mainCanvas', 'fpsDisplay', 'controlsPanel', 'toggleControlsButton', 
-                         'chunkyFactor', 'chunkyFactorValue', 'leaveTrails', 'targetFps', 'targetFpsValue',
-                         'rotationSpeed', 'rotationSpeedValue', 'resetViewButton', 'presets', 'colorFilter',
-                         'primitiveType', 'primitiveParams', 'generatePrimitiveButton', 'fullFrameToggle'];
-            ids.forEach(id => this.elements[id] = document.getElementById(id));
-        }
-
-        _populateSelects() {
-            const primitives = { cube: "Cube", sphere: "Sphere", torus: "Torus", cylinder: "Cylinder" };
-            Object.entries(primitives).forEach(([val, text]) => this.elements.primitiveType.add(new Option(text, val)));
-
-            const filters = { none: "None", grayscale: "Grayscale", sepia: "Sepia", invert: "Invert", 
-                              red_channel: "Red Channel", green_channel: "Green Channel", blue_channel: "Blue Channel" };
-            Object.entries(filters).forEach(([val, text]) => this.elements.colorFilter.add(new Option(text, val)));
-
-            const presets = { default: "Default Smooth", cctv: "Bad CCTV", "80s_vector": "80s Vector Glow", 
-                              ultra_chunky: "Ultra Chunky", ghosting: "Ghosting Effect", psychedelic: "Psychedelic Trails" };
-            Object.entries(presets).forEach(([val, text]) => this.elements.presets.add(new Option(text, val)));
-        }
-        
-        updateUIFromState() {
-            this.elements.chunkyFactor.value = this.renderer.chunkyFactor;
-            this.elements.chunkyFactorValue.textContent = this.renderer.chunkyFactor;
-            this.elements.targetFps.value = this.renderer.targetFps;
-            this.elements.targetFpsValue.textContent = this.renderer.targetFps;
-            this.elements.leaveTrails.checked = this.renderer.leaveTrails;
-            this.elements.rotationSpeed.value = this.scene.rotationSpeedMultiplier;
-            this.elements.rotationSpeedValue.textContent = this.scene.rotationSpeedMultiplier.toFixed(1);
-            this.elements.colorFilter.value = this.renderer.currentColorFilter;
-            this.elements.fullFrameToggle.checked = this.renderer.isFullFrame;
-        }
-
-        _bindEventListeners() {
-            this.elements.toggleControlsButton.addEventListener('click', () => {
-                this.elements.controlsPanel.classList.toggle('collapsed');
-                this.elements.toggleControlsButton.innerHTML = this.elements.controlsPanel.classList.contains('collapsed') ? '☰' : '×'; // Menu/Close
-            });
-
-            window.addEventListener('resize', () => this.renderer.resize());
-
-            this.elements.chunkyFactor.addEventListener('input', e => this.renderer.updateSetting('chunkyFactor', parseInt(e.target.value), true));
-            this.elements.targetFps.addEventListener('input', e => this.renderer.updateSetting('targetFps', parseInt(e.target.value)));
-            this.elements.leaveTrails.addEventListener('change', e => this.renderer.updateSetting('leaveTrails', e.target.checked));
-            this.elements.rotationSpeed.addEventListener('input', e => this.scene.rotationSpeedMultiplier = parseFloat(e.target.value));
-            this.elements.colorFilter.addEventListener('change', e => this.renderer.updateSetting('currentColorFilter', e.target.value));
-            this.elements.fullFrameToggle.addEventListener('change', e => this.renderer.updateSetting('isFullFrame', e.target.checked, true));
-
-            this.elements.chunkyFactor.addEventListener('input', e => this.elements.chunkyFactorValue.textContent = e.target.value);
-            this.elements.targetFps.addEventListener('input', e => this.elements.targetFpsValue.textContent = e.target.value);
-            this.elements.rotationSpeed.addEventListener('input', e => this.elements.rotationSpeedValue.textContent = parseFloat(e.target.value).toFixed(1));
-
-            this.elements.resetViewButton.addEventListener('click', () => { this.scene.rotation = {x:0, y:0}; this.renderer.calculationFrameCounter = 0; });
-            this.elements.primitiveType.addEventListener('change', () => this.updatePrimitiveParamsUI());
-            this.elements.generatePrimitiveButton.addEventListener('click', () => { this.generateSelectedPrimitive(); this.renderer.updateSetting('triggerPrimitiveChange', true, true);});
-            this.elements.presets.addEventListener('change', () => this.applyPreset());
-        }
-
-        updatePrimitiveParamsUI() {
-            this.elements.primitiveParams.innerHTML = '';
-            const type = this.elements.primitiveType.value;
-            let html = '';
-            switch (type) {
-                case 'sphere': html = `<div><label>Radius:</label><input type="number" id="p_sphereR" value="0.5" step="0.1"></div><div><label>Segments:</label><input type="number" id="p_sphereSeg" value="16" min="3"></div><div><label>Rings:</label><input type="number" id="p_sphereRing" value="8" min="2"></div>`; break;
-                case 'torus': html = `<div><label>OuterR:</label><input type="number" id="p_torusOR" value="0.5" step="0.1"></div><div><label>InnerR:</label><input type="number" id="p_torusIR" value="0.2" step="0.05"></div><div><label>OuterSeg:</label><input type="number" id="p_torusOS" value="16" min="3"></div><div><label>InnerSeg:</label><input type="number" id="p_torusIS" value="8" min="3"></div>`; break;
-                case 'cylinder': html = `<div><label>Radius:</label><input type="number" id="p_cylR" value="0.3" step="0.1"></div><div><label>Height:</label><input type="number" id="p_cylH" value="1" step="0.1"></div><div><label>Segments:</label><input type="number" id="p_cylSeg" value="16" min="3"></div>`; break;
-            }
-            this.elements.primitiveParams.innerHTML = html;
-        }
-
-        generateSelectedPrimitive() {
-            const type = this.elements.primitiveType.value;
-            let mesh;
-            try {
-                switch (type) {
-                    case 'sphere': mesh = PrimitiveGenerator.createSphere(parseFloat(document.getElementById('p_sphereR').value), parseInt(document.getElementById('p_sphereSeg').value), parseInt(document.getElementById('p_sphereRing').value)); break;
-                    case 'torus': mesh = PrimitiveGenerator.createTorus(parseFloat(document.getElementById('p_torusOR').value), parseFloat(document.getElementById('p_torusIR').value), parseInt(document.getElementById('p_torusOS').value), parseInt(document.getElementById('p_torusIS').value)); break;
-                    case 'cylinder': mesh = PrimitiveGenerator.createCylinder(parseFloat(document.getElementById('p_cylR').value), parseFloat(document.getElementById('p_cylH').value), parseInt(document.getElementById('p_cylSeg').value)); break;
-                    default: mesh = PrimitiveGenerator.createCube();
-                }
-            } catch (e) { console.error("Error generating primitive:", e); mesh = PrimitiveGenerator.createCube(); }
-            this.scene.setMesh(mesh);
-        }
-        
-        applyPreset() {
-            const preset = this.elements.presets.value;
-            const settings = { chunkyFactor: 8, targetFps: 60, leaveTrails: false, rotationSpeed: 1.0, colorFilter: 'none', isFullFrame: this.renderer.isFullFrame }; // Start with defaults
-            switch (preset) {
-                case 'cctv': Object.assign(settings, { chunkyFactor: 16, targetFps: 5, leaveTrails: true, rotationSpeed: 0.3, colorFilter: 'grayscale' }); break;
-                case '80s_vector': Object.assign(settings, { chunkyFactor: 4, targetFps: 60, leaveTrails: true, rotationSpeed: 0.7 }); break;
-                case 'ultra_chunky': Object.assign(settings, { chunkyFactor: 32, targetFps: 60 }); break;
-                case 'ghosting': Object.assign(settings, { chunkyFactor: 8, targetFps: 15, leaveTrails: true, rotationSpeed: 1.5, colorFilter: 'blue_channel' }); break;
-                case 'psychedelic': Object.assign(settings, { chunkyFactor: 2, targetFps: 60, leaveTrails: true, rotationSpeed: 2.0, colorFilter: 'invert' }); break;
-            }
-            this.renderer.updateSetting('chunkyFactor', settings.chunkyFactor, true); // isMajorChange = true
-            this.renderer.updateSetting('targetFps', settings.targetFps);
-            this.renderer.updateSetting('leaveTrails', settings.leaveTrails);
-            this.scene.rotationSpeedMultiplier = settings.rotationSpeed;
-            this.renderer.updateSetting('currentColorFilter', settings.colorFilter);
-            // isFullFrame is not changed by presets, user controls it separately
-            this.updateUIFromState(); // Reflect preset changes in UI
-        }
-    }
-
-    // --- Application Initialization ---
-    document.addEventListener('DOMContentLoaded', () => {
-        const initialSettings = {
-            chunkyFactor: 8,
-            leaveTrails: false,
-            targetFps: 60,
-            colorFilter: 'none',
-            isFullFrame: false, // Start in fixed mode
-            fixedWidth: 800,    // Default fixed width
-            fixedHeight: 600    // Default fixed height
-        };
-
-        const camera = new Camera(Math.PI / 3, 0.1, 100);
-        const scene = new Scene(camera);
-        const renderer = new ChunkyScanlineRenderer('mainCanvas', scene, initialSettings);
-        const uiController = new UIController(renderer, scene);
-        
-        renderer.start();
-    });
-
+    document.addEventListener('DOMContentLoaded',()=>{const iS={chunkyFactor:8,leaveTrails:false,targetFps:60,colorFilter:'none',isFullFrame:false,fixedWidth:800,fixedHeight:600,grainIntensity:0};const cam=new Camera(Math.PI/3,.1,100),scn=new Scene(cam),rnd=new ScanlinesUIRenderer('mainCanvas',scn,iS),ui=new UIController(rnd,scn);rnd.start();ui.elements.controlsPanel.classList.remove('collapsed'); /* Start with panel open for first view */}); // Panel open on load
     </script>
 </body>
 </html>
